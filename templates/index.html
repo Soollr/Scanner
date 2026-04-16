@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Crypto Assistant v3.2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #080b10;
+    --surface: #0e1420;
+    --surface2: #151d2e;
+    --border: #1e2d45;
+    --green: #00ff88;
+    --red: #ff3d5a;
+    --yellow: #ffd93d;
+    --blue: #4d9fff;
+    --text: #c8d8f0;
+    --muted: #4a6080;
+    --font-mono: 'Space Mono', monospace;
+    --font-head: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-top: 16px;
+  }
+
+  .logo {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: clamp(1.4rem, 5vw, 2.2rem);
+    color: var(--green);
+    letter-spacing: -1px;
+    text-shadow: 0 0 30px rgba(0,255,136,0.4);
+    margin-bottom: 4px;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* SCAN BUTTONS */
+  .scan-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .scan-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-family: var(--font-head);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .scan-btn:active { transform: scale(0.97); }
+
+  .scan-btn.long   { border-color: rgba(0,255,136,0.3); }
+  .scan-btn.long:hover, .scan-btn.long.active  { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.15); background: rgba(0,255,136,0.06); }
+  .scan-btn.short  { border-color: rgba(255,61,90,0.3); }
+  .scan-btn.short:hover, .scan-btn.short.active { border-color: var(--red); box-shadow: 0 0 20px rgba(255,61,90,0.15); background: rgba(255,61,90,0.06); }
+  .scan-btn.hot    { border-color: rgba(255,217,61,0.3); }
+  .scan-btn.hot:hover, .scan-btn.hot.active  { border-color: var(--yellow); box-shadow: 0 0 20px rgba(255,217,61,0.15); background: rgba(255,217,61,0.06); }
+  .scan-btn.all    { grid-column: span 2; border-color: rgba(77,159,255,0.3); }
+  .scan-btn.all:hover, .scan-btn.all.active  { border-color: var(--blue); box-shadow: 0 0 20px rgba(77,159,255,0.15); background: rgba(77,159,255,0.06); }
+
+  .btn-icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+  .btn-label { display: block; font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+
+  .scan-btn.long .btn-title    { color: var(--green); }
+  .scan-btn.short .btn-title   { color: var(--red); }
+  .scan-btn.hot .btn-title     { color: var(--yellow); }
+  .scan-btn.all .btn-title     { color: var(--blue); }
+
+  /* PROGRESS */
+  #progress-area {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.8rem;
+  }
+
+  .progress-mode {
+    font-family: var(--font-head);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .progress-pct {
+    color: var(--green);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .progress-bar-wrap {
+    background: var(--bg);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width 0.3s;
+    width: 0%;
+    box-shadow: 0 0 10px rgba(0,255,136,0.5);
+  }
+
+  .progress-symbol {
+    color: var(--muted);
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* RESULTS */
+  #results-area { display: none; }
+
+  .section-title {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* BTC Context */
+  .btc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .btc-item label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .btc-item .val {
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: var(--font-head);
+  }
+
+  /* Calendar */
+  .cal-card {
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+  }
+
+  .cal-card.NONE    { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); color: var(--green); }
+  .cal-card.CAUTION { background: rgba(255,217,61,0.06); border: 1px solid rgba(255,217,61,0.2); color: var(--yellow); }
+  .cal-card.WARNING { background: rgba(255,140,0,0.08); border: 1px solid rgba(255,140,0,0.3); color: #ffa040; }
+  .cal-card.DANGER  { background: rgba(255,61,90,0.08); border: 1px solid rgba(255,61,90,0.3); color: var(--red); }
+
+  /* Result cards */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .result-card:hover { border-color: rgba(77,159,255,0.4); }
+
+  .card-header {
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .card-rank {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .card-symbol {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+
+  .card-price {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .card-right { text-align: right; }
+
+  .card-action {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+    display: inline-block;
+  }
+
+  .action-STRONG-BUY    { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .action-BUY           { background: rgba(0,200,100,0.1); color: #00c864; border: 1px solid rgba(0,200,100,0.2); }
+  .action-WATCH         { background: rgba(255,217,61,0.1); color: var(--yellow); border: 1px solid rgba(255,217,61,0.2); }
+  .action-CAUTION       { background: rgba(255,140,0,0.1); color: #ffa040; border: 1px solid rgba(255,140,0,0.2); }
+  .action-AVOID         { background: rgba(255,61,90,0.1); color: var(--red); border: 1px solid rgba(255,61,90,0.2); }
+  .action-STRONG-SHORT  { background: rgba(255,61,90,0.15); color: var(--red); border: 1px solid rgba(255,61,90,0.3); }
+  .action-SHORT         { background: rgba(200,50,80,0.1); color: #e04060; border: 1px solid rgba(200,50,80,0.2); }
+  .action-WATCH-SHORT   { background: rgba(255,217,61,0.1); color: var(--yellow); border: 1px solid rgba(255,217,61,0.2); }
+  .action-NO-SHORT      { background: rgba(255,61,90,0.05); color: var(--muted); border: 1px solid var(--border); }
+  .action-HOT           { background: rgba(255,217,61,0.15); color: var(--yellow); border: 1px solid rgba(255,217,61,0.3); }
+
+  .card-score {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .card-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .stat-box label {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+
+  .stat-box .sv {
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  /* Card detail (expandable) */
+  .card-detail {
+    display: none;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .card-detail.open { display: block; }
+
+  .detail-section {
+    margin-bottom: 16px;
+  }
+
+  .detail-section h4 {
+    font-family: var(--font-head);
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 0.78rem;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-row .dk { color: var(--muted); }
+  .detail-row .dv { text-align: right; font-weight: 700; }
+
+  .sl-tp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .sltp-box {
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .sltp-box.sl-box { background: rgba(255,61,90,0.08); border: 1px solid rgba(255,61,90,0.2); }
+  .sltp-box.tp-box { background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.15); }
+
+  .sltp-box label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .sltp-box .sprice { font-family: var(--font-head); font-weight: 700; font-size: 0.9rem; margin: 2px 0; }
+  .sltp-box .spct { font-size: 0.72rem; }
+
+  .sl-box .sprice { color: var(--red); }
+  .sl-box .spct   { color: rgba(255,61,90,0.7); }
+  .tp-box .sprice { color: var(--green); }
+  .tp-box .spct   { color: rgba(0,255,136,0.7); }
+
+  .trigger-list { list-style: none; }
+  .trigger-list li {
+    font-size: 0.78rem;
+    padding: 4px 0;
+    color: var(--text);
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+  }
+  .trigger-list li:last-child { border-bottom: none; }
+
+  .rr-badge {
+    display: inline-block;
+    background: rgba(77,159,255,0.1);
+    border: 1px solid rgba(77,159,255,0.3);
+    color: var(--blue);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    margin-left: 4px;
+  }
+
+  /* Confidence bar */
+  .conf-bar-wrap {
+    background: var(--bg);
+    border-radius: 4px;
+    height: 5px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .conf-bar { height: 100%; border-radius: 4px; }
+  .conf-bar.HIGH   { background: var(--green); }
+  .conf-bar.MEDIUM { background: var(--yellow); }
+  .conf-bar.LOW    { background: var(--red); }
+
+  /* Toast / Error */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 0.8rem;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  #toast.show { opacity: 1; }
+  #toast.err  { border-color: rgba(255,61,90,0.5); color: var(--red); }
+
+  /* Disabled state */
+  .scan-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Color helpers */
+  .c-green { color: var(--green); }
+  .c-red   { color: var(--red); }
+  .c-yellow { color: var(--yellow); }
+  .c-blue  { color: var(--blue); }
+  .c-muted { color: var(--muted); }
+
+  /* Spinner */
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Disclaimer */
+  .disclaimer {
+    text-align: center;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    line-height: 1.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .btc-card { grid-template-columns: repeat(2, 1fr); }
+    .card-stats { grid-template-columns: repeat(2, 1fr); }
+    .sl-tp-grid { grid-template-columns: 1fr; }
+    .scan-grid { grid-template-columns: 1fr; }
+    .scan-btn.all { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">⚡ CRYPTO ASSISTANT</div>
+    <div class="tagline">Bybit Scanner v3.2 · Long · Short · Hot</div>
+  </header>
+
+  <!-- SCAN BUTTONS -->
+  <div class="scan-grid">
+    <button class="scan-btn long" onclick="startScan('long')">
+      <span class="btn-icon">🟢</span>
+      <span class="btn-title">LONG</span>
+      <span class="btn-label">Bybit Spot · 4H</span>
+    </button>
+    <button class="scan-btn short" onclick="startScan('short')">
+      <span class="btn-icon">🔴</span>
+      <span class="btn-title">SHORT</span>
+      <span class="btn-label">Futures Perpetual · 4H</span>
+    </button>
+    <button class="scan-btn hot" onclick="startScan('hot')">
+      <span class="btn-icon">🔥</span>
+      <span class="btn-title">HOT</span>
+      <span class="btn-label">Volume Spike · 1H</span>
+    </button>
+    <button class="scan-btn all" onclick="startScan('all')">
+      <span class="btn-icon">🚀</span>
+      <span class="btn-title">ALL IN ONE</span>
+      <span class="btn-label">Long + Short + Hot sekaligus</span>
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress-area">
+    <div class="progress-header">
+      <span class="progress-mode" id="prog-mode">Scanning...</span>
+      <span class="progress-pct" id="prog-pct">0%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="prog-bar"></div>
+    </div>
+    <div class="progress-symbol" id="prog-symbol">Memulai scan...</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-area"></div>
+
+  <div class="disclaimer">
+    ⚠️ Tool ini hanya untuk referensi analisis teknikal, bukan saran finansial.<br>
+    Selalu gunakan Stop Loss. Risiko maksimal 1-2% per trade.
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+let pollInterval = null;
+let scanActive = false;
+
+function getButtons() {
+  return document.querySelectorAll('.scan-btn');
+}
+
+function setButtonsDisabled(val) {
+  getButtons().forEach(b => b.disabled = val);
+}
+
+function startScan(mode) {
+  if (scanActive) return;
+  scanActive = true;
+  setButtonsDisabled(true);
+
+  const modeLabels = {
+    long: '🟢 LONG Scanner',
+    short: '🔴 SHORT Scanner',
+    hot: '🔥 HOT Scanner',
+    all: '🚀 ALL IN ONE'
+  };
+
+  document.getElementById('prog-mode').textContent = modeLabels[mode] || mode;
+  document.getElementById('prog-pct').textContent = '0%';
+  document.getElementById('prog-bar').style.width = '0%';
+  document.getElementById('prog-symbol').textContent = 'Menghubungkan ke Bybit...';
+  document.getElementById('progress-area').style.display = 'block';
+  document.getElementById('results-area').style.display = 'none';
+  document.getElementById('results-area').innerHTML = '';
+
+  fetch(`/api/scan/${mode}`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { showError(d.error); resetUI(); return; }
+      pollInterval = setInterval(pollStatus, 800);
+    })
+    .catch(e => { showError('Gagal terhubung ke server'); resetUI(); });
+}
+
+function pollStatus() {
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(st => {
+      if (st.total > 0) {
+        const pct = Math.round((st.progress / st.total) * 100);
+        document.getElementById('prog-pct').textContent = pct + '%';
+        document.getElementById('prog-bar').style.width = pct + '%';
+        document.getElementById('prog-symbol').textContent =
+          `[${st.progress}/${st.total}] ${st.current_symbol || ''}`;
+      }
+
+      if (!st.running) {
+        clearInterval(pollInterval);
+        fetch('/api/result')
+          .then(r => r.json())
+          .then(rd => {
+            document.getElementById('progress-area').style.display = 'none';
+            if (rd.status === 'error') {
+              showError(rd.error || 'Terjadi error saat scan');
+            } else if (rd.status === 'done') {
+              renderResults(rd.result, rd.mode);
+            }
+            resetUI();
+          });
+      }
+    })
+    .catch(() => {});
+}
+
+function resetUI() {
+  scanActive = false;
+  setButtonsDisabled(false);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderResults(result, mode) {
+  const area = document.getElementById('results-area');
+  area.innerHTML = '';
+  area.style.display = 'block';
+
+  if (mode === 'all') {
+    if (result.long)  renderSection(area, result.long,  'long',  '🟢 LONG SETUP');
+    if (result.short) renderSection(area, result.short, 'short', '🔴 SHORT SETUP');
+    if (result.hot)   renderSection(area, result.hot,   'hot',   '🔥 HOT COINS');
+  } else {
+    const labels = { long:'🟢 LONG SETUP', short:'🔴 SHORT SETUP', hot:'🔥 HOT COINS' };
+    renderSection(area, result, mode, labels[mode] || mode.toUpperCase());
+  }
+}
+
+function renderSection(container, data, mode, label) {
+  if (!data || data.error) {
+    const err = document.createElement('div');
+    err.className = 'cal-card DANGER';
+    err.textContent = '❌ Error: ' + (data?.error || 'Gagal scan');
+    container.appendChild(err);
+    return;
+  }
+
+  const sec = document.createElement('div');
+  sec.style.marginBottom = '28px';
+
+  // Title
+  const title = document.createElement('div');
+  title.className = 'section-title';
+  title.innerHTML = label + `<span style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-left:auto">${(data.results||[]).length} sinyal</span>`;
+  sec.appendChild(title);
+
+  // BTC context (long + short)
+  if (data.btc && mode !== 'hot') {
+    sec.appendChild(renderBtc(data.btc));
+  }
+
+  // Calendar
+  if (data.cal) {
+    sec.appendChild(renderCal(data.cal));
+  }
+
+  // Results
+  if (!data.results || data.results.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-card NONE';
+    empty.textContent = '📭 Tidak ada sinyal memenuhi kriteria saat ini.';
+    sec.appendChild(empty);
+  } else {
+    data.results.forEach((r, i) => {
+      sec.appendChild(renderCard(r, i + 1, mode));
+    });
+  }
+
+  container.appendChild(sec);
+}
+
+function renderBtc(btc) {
+  const card = document.createElement('div');
+  card.className = 'btc-card';
+
+  const trend = btc.trend || 'N/A';
+  const trendColor = trend.includes('UP') ? 'c-green' : trend.includes('DOWN') ? 'c-red' : 'c-yellow';
+  const ch24color = (btc.ch24 || 0) >= 0 ? 'c-green' : 'c-red';
+  const ch24sign = (btc.ch24 || 0) >= 0 ? '+' : '';
+
+  card.innerHTML = `
+    <div class="btc-item">
+      <label>BTC Price</label>
+      <div class="val">${fmtPrice(btc.price || 0)}</div>
+    </div>
+    <div class="btc-item">
+      <label>24h Change</label>
+      <div class="val ${ch24color}">${ch24sign}${(btc.ch24||0).toFixed(2)}%</div>
+    </div>
+    <div class="btc-item">
+      <label>Trend</label>
+      <div class="val ${trendColor}" style="font-size:0.8rem">${trend}</div>
+    </div>
+    <div class="btc-item">
+      <label>RSI</label>
+      <div class="val">${btc.rsi || 'N/A'}</div>
+    </div>
+    <div class="btc-item">
+      <label>ADX</label>
+      <div class="val">${btc.adx || 'N/A'}</div>
+    </div>
+    <div class="btc-item">
+      <label>EMA 200</label>
+      <div class="val" style="font-size:0.8rem">${fmtPrice(btc.e200 || 0)}</div>
+    </div>
+  `;
+  return card;
+}
+
+function renderCal(cal) {
+  const card = document.createElement('div');
+  card.className = `cal-card ${cal.warning_level || 'NONE'}`;
+  const icons = { NONE:'✅', CAUTION:'⚠️', WARNING:'🚨', DANGER:'🔴' };
+  const msgs  = {
+    NONE:    '📅 Tidak ada event high-impact 24 jam ke depan',
+    CAUTION: '📅 Ada event ekonomi — pertimbangkan size lebih kecil',
+    WARNING: '📅 Risiko volatilitas tinggi — kurangi size 50%',
+    DANGER:  '📅 SANGAT DISARANKAN TUNDA TRADING sampai event selesai',
+  };
+  const level = cal.warning_level || 'NONE';
+  let html = `<strong>${icons[level]} Economic Calendar — ${level}</strong><br>${msgs[level]}`;
+  if (cal.events && cal.events.length > 0) {
+    html += '<ul style="margin-top:8px;padding-left:16px;">';
+    cal.events.forEach(ev => {
+      html += `<li>${ev.time} — ${ev.title}</li>`;
+    });
+    html += '</ul>';
+  }
+  card.innerHTML = html;
+  return card;
+}
+
+function renderCard(r, rank, mode) {
+  const card = document.createElement('div');
+  card.className = 'result-card';
+
+  const actionKey = (r.action || '').replace(/[🔥👀❄️\s]+/g, '-').replace(/^-+|-+$/g,'').toUpperCase();
+  const actionClass = 'action-' + actionKey;
+
+  const ch24color = (r.change_24h||0) >= 0 ? 'c-green' : 'c-red';
+  const ch24sign  = (r.change_24h||0) >= 0 ? '+' : '';
+  const sl = r.sltp || {};
+  const cf = r.confidence || {};
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  header.innerHTML = `
+    <div>
+      <div class="card-rank">#${rank}</div>
+      <div class="card-symbol">${(r.symbol||'').replace('/USDT','').replace(':USDT','')}</div>
+      <div class="card-price">${fmtPrice(r.price||0)}</div>
+    </div>
+    <div class="card-right">
+      <div class="card-action ${actionClass}">${r.action || 'N/A'}</div>
+      <div class="card-score c-muted">${r.score||0}/100 · ${r.probability||0}%</div>
+    </div>
+  `;
+
+  const stats = document.createElement('div');
+  stats.className = 'card-stats';
+
+  const volSpike = mode === 'hot' ? `<div class="stat-box"><label>Vol Spike</label><div class="sv c-yellow">${r.spike_mult||0}x</div></div>` : '';
+  const ch1h = mode === 'hot' ? `<div class="stat-box"><label>1h%</label><div class="sv ${(r.change_1h||0)>=0?'c-green':'c-red'}">${(r.change_1h||0)>=0?'+':''}${(r.change_1h||0).toFixed(2)}%</div></div>` : '';
+
+  stats.innerHTML = `
+    <div class="stat-box">
+      <label>24h %</label>
+      <div class="sv ${ch24color}">${ch24sign}${(r.change_24h||0).toFixed(2)}%</div>
+    </div>
+    <div class="stat-box">
+      <label>SL</label>
+      <div class="sv c-red">${(sl.sl_pct||0).toFixed(2)}%</div>
+    </div>
+    <div class="stat-box">
+      <label>R:R</label>
+      <div class="sv c-blue">1:${sl.rr2||'?'}</div>
+    </div>
+    ${volSpike || `<div class="stat-box"><label>Confidence</label><div class="sv" style="font-size:0.72rem">${cf.icon||''} ${cf.level||'?'}</div></div>`}
+  `;
+
+  // Detail
+  const detail = document.createElement('div');
+  detail.className = 'card-detail';
+  detail.innerHTML = buildDetail(r, mode);
+
+  // Toggle
+  header.addEventListener('click', () => {
+    detail.classList.toggle('open');
+  });
+
+  card.appendChild(header);
+  card.appendChild(stats);
+  card.appendChild(detail);
+  return card;
+}
+
+function buildDetail(r, mode) {
+  const sl = r.sltp || {};
+  const sig = r.signals || {};
+  const cf  = r.confidence || {};
+  const ez  = r.entry_zone || {};
+  const vp  = r.volume_poc || null;
+  const trig = r.entry_trigger || {};
+  let html = '';
+
+  // Confidence
+  const confPct = cf.pct || 0;
+  html += `
+    <div class="detail-section">
+      <h4>📊 Signal Confidence</h4>
+      <div class="detail-row">
+        <span class="dk">Level</span>
+        <span class="dv">${cf.label || 'N/A'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="dk">Indikator Sepakat</span>
+        <span class="dv">${cf.agree||0} bull · ${cf.disagree||0} bear · ${cf.neutral||0} neutral</span>
+      </div>
+      <div class="conf-bar-wrap">
+        <div class="conf-bar ${cf.level||'LOW'}" style="width:${confPct}%"></div>
+      </div>
+    </div>`;
+
+  // Signals
+  html += `
+    <div class="detail-section">
+      <h4>📈 Sinyal Teknikal</h4>
+      <div class="detail-row"><span class="dk">Trend</span><span class="dv">${sig.trend||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">RSI</span><span class="dv">${sig.rsi||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">MACD</span><span class="dv">${sig.macd||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">ADX</span><span class="dv">${sig.adx||'N/A'} (${sig.adx_bias||'?'})</span></div>
+      <div class="detail-row"><span class="dk">Stoch RSI</span><span class="dv">${sig.stoch_k||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">Ichimoku</span><span class="dv">${sig.ichimoku||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">OBV</span><span class="dv">${sig.obv||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">VWAP</span><span class="dv">${sig.vwap||'N/A'}</span></div>
+      <div class="detail-row"><span class="dk">Volume</span><span class="dv">${sig.vol_ratio||'N/A'}x avg</span></div>
+      <div class="detail-row"><span class="dk">Patterns</span><span class="dv">${(sig.patterns||[]).join(', ')}</span></div>
+    </div>`;
+
+  // Entry Zone
+  if (ez && ez.status) {
+    html += `
+      <div class="detail-section">
+        <h4>🎯 Entry Zone</h4>
+        <div class="detail-row"><span class="dk">Status</span><span class="dv">${ez.status}</span></div>
+        <div class="detail-row"><span class="dk">Ideal Low</span><span class="dv">${fmtPrice(ez.ideal_low||0)} (${(ez.ideal_pct_low||0).toFixed(2)}%)</span></div>
+        <div class="detail-row"><span class="dk">Ideal High</span><span class="dv">${fmtPrice(ez.ideal_high||0)} (${(ez.ideal_pct_high||0).toFixed(2)}%)</span></div>
+        <div class="detail-row"><span class="dk">EMA21</span><span class="dv">${fmtPrice(ez.e21||0)}</span></div>
+        <div class="detail-row"><span class="dk">Fib 0.382</span><span class="dv">${fmtPrice(ez.fib_382||0)}</span></div>
+      </div>`;
+  }
+
+  // Entry Trigger
+  if (trig && trig.recommendation) {
+    const trigScore = trig.trigger_score || 0;
+    const trigColor = trigScore >= 3 ? 'c-green' : trigScore >= 2 ? 'c-yellow' : 'c-muted';
+    html += `
+      <div class="detail-section">
+        <h4>⚡ Entry Trigger</h4>
+        <div class="detail-row"><span class="dk">Rekomendasi</span><span class="dv ${trigColor}">${trig.recommendation}</span></div>
+        <ul class="trigger-list">`;
+    (trig.triggers||[]).forEach(t => {
+      const isEntry = t.includes('ENTRY') || t.includes('Engulfing') || t.includes('Cross');
+      html += `<li>${isEntry ? '✅' : '⏳'} ${t}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  // Volume POC
+  if (vp) {
+    html += `
+      <div class="detail-section">
+        <h4>📊 Volume Profile POC</h4>
+        <div class="detail-row"><span class="dk">POC</span><span class="dv">${fmtPrice(vp.poc||0)} (${(vp.poc_dist||0).toFixed(2)}%)</span></div>
+        <div class="detail-row"><span class="dk">Value Area</span><span class="dv">${fmtPrice(vp.val||0)} — ${fmtPrice(vp.vah||0)}</span></div>
+        <div class="detail-row"><span class="dk">Posisi</span><span class="dv">${vp.position||'N/A'} ${vp.is_near_poc ? '⭐' : ''}</span></div>
+      </div>`;
+  }
+
+  // SL/TP
+  html += `
+    <div class="detail-section">
+      <h4>🛑 Stop Loss & Take Profit</h4>
+      <div class="detail-row" style="margin-bottom:10px;"><span class="dk">Regime</span><span class="dv" style="font-size:0.72rem;text-align:right;max-width:60%">${sl.regime||'N/A'}</span></div>
+      <div class="sl-tp-grid">
+        <div class="sltp-box sl-box">
+          <label>Stop Loss</label>
+          <div class="sprice">${fmtPrice(sl.sl||0)}</div>
+          <div class="spct">${(sl.sl_pct||0).toFixed(2)}%</div>
+        </div>
+        <div class="sltp-box tp-box">
+          <label>TP1 <span class="rr-badge">1:${sl.rr1||'?'}</span></label>
+          <div class="sprice">${fmtPrice(sl.tp1||0)}</div>
+          <div class="spct">${(sl.tp1_pct||0).toFixed(2)}%</div>
+        </div>
+        <div class="sltp-box tp-box">
+          <label>TP2 <span class="rr-badge">1:${sl.rr2||'?'}</span></label>
+          <div class="sprice">${fmtPrice(sl.tp2||0)}</div>
+          <div class="spct">${(sl.tp2_pct||0).toFixed(2)}%</div>
+        </div>
+        <div class="sltp-box tp-box">
+          <label>TP3 <span class="rr-badge">1:${sl.rr3||'?'}</span></label>
+          <div class="sprice">${fmtPrice(sl.tp3||0)}</div>
+          <div class="spct">${(sl.tp3_pct||0).toFixed(2)}%</div>
+        </div>
+      </div>
+      ${sl.liq_warning ? '<div style="margin-top:10px;font-size:0.75rem;color:var(--yellow);">⚠️ SL dekat zona likuiditas — waspadai stop hunt!</div>' : ''}
+      <div style="margin-top:10px;font-size:0.75rem;color:var(--muted);">
+        Trail BE: ${fmtPrice(sl.trail_be||0)} · Trail TP1: ${fmtPrice(sl.trail_tp1||0)}
+      </div>
+    </div>`;
+
+  return html;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmtPrice(p) {
+  if (!p || isNaN(p)) return '$0';
+  if (p < 0.001)  return '$' + p.toFixed(8);
+  if (p < 0.1)    return '$' + p.toFixed(6);
+  if (p < 1)      return '$' + p.toFixed(4);
+  if (p < 100)    return '$' + p.toFixed(4);
+  if (p < 10000)  return '$' + p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return '$' + p.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+
+function showError(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = '❌ ' + msg;
+  t.className = 'show err';
+  setTimeout(() => { t.className = ''; }, 4000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show';
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+</script>
+</body>
+</html>
